@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class CurrencyImpl implements Currency {
+
     private final String code;
     private final String name;
     private final Map<Currency, Double> exchangeRates;
@@ -13,41 +14,53 @@ public class CurrencyImpl implements Currency {
         this.name = name;
         this.exchangeRates = new HashMap<>();
     }
+    
+    public CurrencyImpl(String code) {
+    	this(code, "");
+    	}
 
+    @Override
     public String getCode() {
         return code;
     }
 
+    @Override
     public String getName() {
         return name;
     }
 
+    @Override
     public void setExchangeRate(Currency toCurrency, double rate) {
+        if (toCurrency == null) {
+            throw new IllegalArgumentException("Currency cannot be null");
+        }
+
+        if (this == toCurrency) {
+            throw new IllegalArgumentException("Cannot set exchange rate for the same currency");
+        }
+
+        if (Double.isNaN(rate) || rate <= 0) {
+            throw new IllegalArgumentException("Exchange rate must be a positive number");
+        }
+
         exchangeRates.put(toCurrency, rate);
     }
 
+    @Override
     public double getExchangeRate(Currency toCurrency) {
+        if (toCurrency == null) {
+            throw new IllegalArgumentException("Currency cannot be null");
+        }
+
         if (this == toCurrency) {
             return 1.0;
         }
-        return exchangeRates.getOrDefault(toCurrency, 0.0);
+
+        Double rate = exchangeRates.get(toCurrency);
+        if (rate == null) {
+            throw new IllegalArgumentException("Exchange rate not found for currency " + toCurrency.getCode());
+        }
+
+        return rate;
     }
-
-
-	public String getConversionUnits() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("1 ").append(getCode()).append(" =\n");
-		for (Map.Entry<Currency, Double> entry : exchangeRates.entrySet()) {
-			Currency toCurrency = entry.getKey();
-			double rate = entry.getValue();
-			sb.append(String.format("%.4f", rate)).append(" ").append(toCurrency.getCode()).append("\n");
-		}
-		return sb.toString();
-	}
-	
-	@Override
-	public String toString() {
-	    return code + " - " + name;
-	}
-
 }

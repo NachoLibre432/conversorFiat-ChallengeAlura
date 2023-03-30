@@ -5,14 +5,16 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import javax.swing.JComboBox;
+import java.util.Set;
 
 public class CurrencyFactory {
-    private static CurrencyFactory instance = null;
-    private Map<String, Currency> currencies;
+
+    private static CurrencyFactory instance;
+
+    private final Map<String, Currency> currencies;
 
     private CurrencyFactory() {
-        currencies = new HashMap<>();
+        this.currencies = new HashMap<>();
         loadCurrencies();
     }
 
@@ -23,41 +25,104 @@ public class CurrencyFactory {
         return instance;
     }
 
-    public Currency getCurrency(String currencyCode) {
-        Currency currency = currencies.get(currencyCode);
+    public Currency getCurrency(String code) {
+        Currency currency = currencies.get(code);
         if (currency == null) {
-            throw new IllegalArgumentException("Unsupported currency code: " + currencyCode);
+            throw new IllegalArgumentException("Currency " + code + " not found");
         }
         return currency;
     }
 
+    public Set<String> getAvailableCurrencies() {
+        return currencies.keySet();
+    }
+
     public void loadCurrencies() {
-        try (InputStream input = CurrencyFactory.class.getClassLoader()
-                .getResourceAsStream("com/exchange/currencies/currencies.properties/currencies.properties")) {
-            Properties properties = new Properties();
-            properties.load(input);
-            for (String currencyCode : properties.stringPropertyNames()) {
-                String[] currencyValues = properties.getProperty(currencyCode).split(",");
-                Currency currency = new CurrencyImpl(currencyCode, currencyValues[0].trim());
-                for (int i = 1; i < currencyValues.length; i += 2) {
-                    Currency exchangeCurrency = getCurrency(currencyValues[i].trim());
-                    double exchangeRate = Double.parseDouble(currencyValues[i + 1].trim());
-                    currency.setExchangeRate(exchangeCurrency, exchangeRate);
+        if (!currencies.isEmpty()) {
+            // currencies have already been loaded
+            return;
+        }
+        Properties properties = new Properties();
+        InputStream inputStream = CurrencyFactory.class.getClassLoader().getResourceAsStream("com/exchange/currencies/currencyList/currencies.properties");
+        try {
+            properties.load(inputStream);
+            String[] codes = properties.getProperty("codes").split(",");
+            for (String code : codes) {
+                String name = properties.getProperty(code);
+                if (name == null) {
+                    throw new RuntimeException("Error loading currency with code " + code);
                 }
-                currencies.put(currencyCode, currency);
+                Currency currency = createCurrency(code, name);
+                currencies.put(code, currency);
             }
+            currencies.put("MXN", createCurrency("MXN", "Mexican Peso"));
+
+            setExchangeRates(properties);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Error loading currencies from file", e);
+        } finally {
+            try {
+                inputStream.close();
+            } catch (IOException e) {
+                // ignore
+            }
         }
     }
 
-    public Currency[] getAvailableCurrencies() {
-        return currencies.values().toArray(new Currency[0]);
+    public Currency createCurrency(String code, String name) {
+        return new CurrencyImpl(code, name);
     }
-    
-    public Currency getCurrencyFromComboBox(JComboBox comboBox) {
-        String selectedCurrencyCode = (String) comboBox.getSelectedItem();
-        Currency selectedCurrency = getCurrency(selectedCurrencyCode);
-        return selectedCurrency;
+
+    private void setExchangeRates(Properties properties) {
+        for (String code : currencies.keySet()) {
+            Currency currency = currencies.get(code);
+            for (String toCode : currencies.keySet()) {
+                if (!code.equals(toCode)) {
+                    Currency toCurrency = currencies.get(toCode);
+                    String rateProperty = code + "." + toCode + ".rate";
+                    String rateString = properties.getProperty(rateProperty);
+                    if (rateString != null) {
+                        double rate = Double.parseDouble(rateString);
+                        currency.setExchangeRate(toCurrency, rate);
+                    }
+                }
+            }
+        }
+        
+        Currency usd = getCurrency("USD");
+        Currency eur = getCurrency("EUR");
+        Currency jpy = getCurrency("JPY");
+        Currency gbp = getCurrency("GBP");
+        Currency kpw = getCurrency("KPW");
+        Currency mxn = getCurrency("MXN");
+        
+        usd.setExchangeRate(eur, 0.824646);
+        usd.setExchangeRate(jpy, 104.448473);
+        usd.setExchangeRate(gbp, 0.728006);
+        usd.setExchangeRate(kpw, 900.000000);
+        usd.setExchangeRate(mxn, 19.9518); 
+
+        eur.setExchangeRate(usd, 1.212680);
+        eur.setExchangeRate(jpy, 127.873910);
+        eur.setExchangeRate(gbp, 0.889301);
+        eur.setExchangeRate(kpw, 1356.930693);
+        eur.setExchangeRate(mxn, 23.0637);
+
+        jpy.setExchangeRate(usd, 0.009577);
+        jpy.setExchangeRate(eur, 0.007817);
+        jpy.setExchangeRate(gbp, 0.006978);
+        jpy.setExchangeRate(kpw, 10.677054);
+        jpy.setExchangeRate(mxn, 0.1819);
+
+        gbp.setExchangeRate(usd, 1.373914);
+        gbp.setExchangeRate(eur, 1.124782);
+        gbp.setExchangeRate(jpy, 143.167277);
+        gbp.setExchangeRate(kpw, 1695.652174);
+        gbp.setExchangeRate(mxn, 25.2928);
+
+        kpw.setExchangeRate(usd, 0.001111);
+        mxn.setExchangeRate(usd, 0.0501);
+
+        
     }
 }

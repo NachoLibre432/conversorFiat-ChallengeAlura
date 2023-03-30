@@ -6,6 +6,7 @@ import com.exchange.currencies.Convert;
 import com.exchange.currencies.Currency;
 import com.exchange.currencies.CurrencyFactory;
 import com.exchange.currencies.exceptions.CurrencyConversionException;
+import com.exchange.currencies.CurrencyImpl;
 
 public class Window {
 
@@ -37,15 +38,10 @@ public class Window {
                 // getAvailableCurrencies
 
                 CurrencyFactory factory = CurrencyFactory.getInstance();
-                Currency[] currencies = factory.getAvailableCurrencies();
-                String[] currencyCodes = new String[currencies.length];
-                for (int i = 0; i < currencies.length; i++) {
-                    currencyCodes[i] = currencies[i].getCode();
-                }
+                String[] currencies = factory.getAvailableCurrencies().toArray(new String[0]);
 
-                JComboBox<String> fromCombo = new JComboBox<>(currencyCodes);
-                JComboBox<String> toCombo = new JComboBox<>(currencyCodes);
-
+                JComboBox<String> fromCombo = new JComboBox<>(currencies);
+                JComboBox<String> toCombo = new JComboBox<>(currencies);
 
                 JPanel panel = new JPanel();
                 panel.add(new JLabel("Moneda de origen: "));
@@ -68,37 +64,37 @@ public class Window {
 
                 int resultDialog = JOptionPane.showConfirmDialog(null, panel, "Conversor de monedas",
                         JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
                 if (resultDialog == JOptionPane.OK_OPTION) {
 
                     String fromCode = (String) fromCombo.getSelectedItem();
                     String toCode = (String) toCombo.getSelectedItem();
+                    System.out.println("Selected currency: " + toCode);
+
+                    Currency fromCurrency = new CurrencyImpl(fromCode);
+                    Currency toCurrency = new CurrencyImpl(toCode);
 
                     try {
-                    	Currency fromCurrency = factory.getCurrency(fromCode);
-                    	Currency toCurrency = factory.getCurrency(toCode);
-                    	double conversionResult = Convert.convert(fromCurrency, toCurrency, amount);
-                    	
-                        JOptionPane.showMessageDialog(null,
-                                amount + " " + fromCode + " = " + conversionResult + " " + toCode);
+                        double conversionResult = Convert.convert(fromCurrency, toCurrency, amount);
+                        JOptionPane.showMessageDialog(null, amount + " " + fromCode + " = " + conversionResult + " " + toCode);
                     } catch (CurrencyConversionException e) {
-                        JOptionPane.showMessageDialog(null, e.getMessage(), "Error de conversión",
-                                JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(null, e.getMessage(), "Error de conversión", JOptionPane.ERROR_MESSAGE);
                     }
+                } else {
+                    JOptionPane.showMessageDialog(null, "Se produjo un error al crear las monedas.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
-                break;
-
-
-		case "TEMPERATURE":
-			double temperature = 0;
-			boolean validTemperature = false;
-			while (!validTemperature) {
-				String temperatureString = JOptionPane.showInputDialog(null, "Introduce la temperatura a convertir:");
-				try {
-					temperature = Double.parseDouble(temperatureString);
-					validTemperature = true;
-				} catch (NumberFormatException e) {
-					JOptionPane.showMessageDialog(null, "La temperatura no es válida.", "Error",
-							JOptionPane.ERROR_MESSAGE);
+            
+            case "TEMPERATURE":
+                double temperature = 0;
+                boolean validTemperature = false;
+                while (!validTemperature) {
+                    String temperatureString = JOptionPane.showInputDialog(null, "Introduce la temperatura a convertir:");
+                    try {
+                        temperature = Double.parseDouble(temperatureString);
+                        validTemperature = true;
+                    } catch (NumberFormatException e) {
+                        JOptionPane.showMessageDialog(null, "La temperatura no es válida.", "Error",
+                        		JOptionPane.ERROR_MESSAGE);
 				}
 			}
 
